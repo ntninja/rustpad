@@ -49,19 +49,31 @@ function generateHue() {
   return Math.floor(Math.random() * 360);
 }
 
+function useSearchParamOrStorage(key: String, generator: () => String)
+{
+  let searchString = window.location.hash.split("?")[1];
+  let searchParams = new URLSearchParams(typeof(searchString) === "string" ? searchString : "");
+  if (searchParams.has(key)) {
+    return useState(searchParams.get(key));
+  } else {
+    return useStorage(key, generator);
+  }
+}
+
 function App() {
+  const id = useHash();  // Normalizes URL
+
   const toast = useToast();
   const [language, setLanguage] = useState("plaintext");
   const [connection, setConnection] = useState<
     "connected" | "disconnected" | "desynchronized"
   >("disconnected");
   const [users, setUsers] = useState<Record<number, UserInfo>>({});
-  const [name, setName] = useStorage("name", generateName);
+  const [name, setName] = useSearchParamOrStorage("userName", generateName);
   const [hue, setHue] = useStorage("hue", generateHue);
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
   const [darkMode, setDarkMode] = useStorage("darkMode", () => false);
   const rustpad = useRef<Rustpad>();
-  const id = useHash();
 
   useEffect(() => {
     if (editor?.getModel()) {

@@ -54,9 +54,7 @@ function generateHue() {
   return Math.floor(Math.random() * 360);
 }
 
-function useParamOrElse<T>(
-  key: string, type: "string" | "boolean", makeState: () => [T, (T) => null]
-): [T, (T) => null]
+function getParam<T>(key: string, type: "string" | "number" | "boolean", def: T=null): T | null
 {
   let searchString = window.location.hash.split("?")[1];
   let searchParams = new URLSearchParams(typeof(searchString) === "string" ? searchString : "");
@@ -67,6 +65,18 @@ function useParamOrElse<T>(
     } else if (type === "number") {
       value = Number(value);
     }
+    return value;
+  } else {
+    return def;
+  }
+}
+
+function useParamOrElse<T>(
+  key: string, type: "string" | "number" | "boolean", makeState: () => [T, (T) => null]
+): [T, (T) => null]
+{
+  let value = getParam(key, type);
+  if (value !== null) {
     return useState(value);
   } else {
     return makeState();
@@ -74,14 +84,14 @@ function useParamOrElse<T>(
 }
 
 function useParamOrState<T>(
-  key: string, type: "string" | "boolean", generator: () => T
+  key: string, type: "string" | "number" | "boolean", generator: () => T
 ): [T, (T) => null]
 {
   return useParamOrElse(key, type, () => useState(generator));
 }
 
 function useParamOrStorage<T>(
-  key: string, type: "string" | "boolean", generator: () => T
+  key: string, type: "string" | "number" | "boolean", generator: () => T
 ): [T, (T) => null]
 {
   return useParamOrElse(key, type, () => useStorage(key, generator));
@@ -91,7 +101,7 @@ function App() {
   const id = useHash();  // Normalizes URL
 
   const sidebar = useDisclosure({
-    defaultIsOpen: true,
+    defaultIsOpen: getParam("showSidebar", "boolean", true),
   });
   const [isSidebarHidden, setSidebarHidden] = useState(!sidebar.isOpen);
   const toast = useToast();

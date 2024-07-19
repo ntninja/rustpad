@@ -49,30 +49,54 @@ function generateHue() {
   return Math.floor(Math.random() * 360);
 }
 
-function useSearchParamOrStorage(key: String, generator: () => String)
+function useParamOrElse<T>(
+  key: string, type: "string" | "boolean", makeState: () => [T, (T) => null]
+): [T, (T) => null]
 {
   let searchString = window.location.hash.split("?")[1];
   let searchParams = new URLSearchParams(typeof(searchString) === "string" ? searchString : "");
   if (searchParams.has(key)) {
-    return useState(searchParams.get(key));
+    let value = searchParams.get(key);
+    if (type === "boolean") {
+      value = value !== "false";
+    } else if (type === "number") {
+      value = Number(value);
+    }
+    return useState(value);
   } else {
-    return useStorage(key, generator);
+    return makeState();
   }
+}
+
+function useParamOrState<T>(
+  key: string, type: "string" | "boolean", generator: () => T
+): [T, (T) => null]
+{
+  return useParamOrElse(key, type, () => useState(generator));
+}
+
+function useParamOrStorage<T>(
+  key: string, type: "string" | "boolean", generator: () => T
+): [T, (T) => null]
+{
+  return useParamOrElse(key, type, () => useStorage(key, generator));
 }
 
 function App() {
   const id = useHash();  // Normalizes URL
 
   const toast = useToast();
-  const [language, setLanguage] = useState("plaintext");
+  const [language, setLanguage] = useParamOrState("language", "string", "plaintext");
   const [connection, setConnection] = useState<
     "connected" | "disconnected" | "desynchronized"
   >("disconnected");
   const [users, setUsers] = useState<Record<number, UserInfo>>({});
-  const [name, setName] = useSearchParamOrStorage("userName", generateName);
-  const [hue, setHue] = useStorage("hue", generateHue);
+  const [name, setName] = useParamOrStorage("userName", "string", generateName);
+  const [hue, setHue] = useParamOrStorage("userHue", "number", generateHue);
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
-  const [darkMode, setDarkMode] = useStorage("darkMode", () => false);
+  const [darkMode, setDarkMode] = useParamOrStorage(
+    "darkMode", "boolean", () => window.matchMedia("(prefers-color-scheme: dark)")
+  );
   const rustpad = useRef<Rustpad>();
 
   useEffect(() => {
